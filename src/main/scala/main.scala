@@ -1,77 +1,96 @@
 
 import scala.io.Source
-import Array._
 import Math._
+import scala.collection.mutable.Map
 
 object main {
 
-  /* 这是我的第一个 Scala 程序
-
-   * 以下程序将输出'Hello World!'
-
+  /* first and maybe last scala program
+   * if will work out knn in the FP way as far as possible
+   * I tried my best
    */
 
+  /*
+   * main function
+   * parameter:
+   *   args :
+   *     0 -- path of data file
+   *     1 -- the aim point x(double)
+   *     2 -- the aim point y(double)
+   *     3 -- k in 'k'-nn
+   * ps. file format: a b c -- x, y, label
+   */
   def main(args: Array[String]) {
-    knn(3, loadData("E:/work/code/scala/data.txt"), Array(1, 1))
-
+    knn(args(3).toInt, args(0), Array(args(1).toDouble, args(2).toDouble))
   }
 
   /*
-  load data from file
-  parameter:
-  path : String  file path
-  return:
-  Array result array
-  file format:
-  1 x -- count of date lines
-  2 a b c -- x, y, label
-  ...
+   * knn main part, statistic the
+   * parameter:
+   *   k : 'k'-nn
+   *   path : path of data file
+   *   newPoint : the aim point x, y
+   * return:
+   *   whatever
    */
-  def loadData(path: String): Array[Array[Int]] = {
-    val file = Source.fromFile(path).getLines()
-    val data = ofDim[Int](file.length, 3)
-    for (i <- 0 until file.length) {
-      val temp = file.next().split(" ")
-      for (j <- 0 until temp.length) {
-        data(i)(0) = temp(j)(0)
-        data(i)(1) = temp(j)(1)
-        data(i)(2) = temp(j)(2)
-      }
-    }
-    //test for loaded result
-    for (i <- 0 until file.length) {
-      for (j <- 0 to 2) {
-        println(data(i)(j))
-      }
-    }
-    data
+  def knn(k: Int, path: String, newPoint: Array[Double]): Unit = {
+    findFirstK(k, compute(path, newPoint)).foreach(i => println("label: " + i._1 + " times: " + i._2))
   }
 
   /*
-  load data from file
-  parameter:
-  path : String  file path
-  return:
-  Array result array
-  file format:
-  1 x -- count of date lines
-  2 a b c -- x, y, label
-  ...
+   * knn distance compute part
+   * parameter:
+   *   path : path of data file
+   *   newPoint : the aim point x, y
+   * return:
+   *   the list of distance with label
    */
-  def knn(n: Int, data: Array[Array[Int]], newPoint: Array[Int]): Unit = {
-    if (n > data.length) {
-      println("n is bigger than the number of data, using the number of data as n.")
-      val n = data.length
-    }
-    compute(data, newPoint)
+  def compute(path: String, newPoint: Array[Double]): List[(Double, Int)] = {
+    var distances: List[(Double, Int)] = List()
+    Source.fromFile(path).getLines().foreach ( line => distances = distances :+ toDistance(line, newPoint))
+    distances
   }
-  def compute(data: Array[Array[Int]], newPoint: Array[Int]): Unit = {
-    val distance = new Array[Double](data.length)
-    for (i <- 0 to data.length - 1) {
-      distance(i) = sqrt(pow(data(i)(0) - newPoint(0), 2) + pow(data(i)(1) - newPoint(1), 2))
+
+  /*
+   * main distance compute part
+   * parameter:
+   *   line : a line of data like : x(double) y(double) label(int)
+   *   newPoint : the aim point x, y
+   * return:
+   *   the distance between the line of data with aim point
+   */
+  def toDistance(line: String, newPoint: Array[Double]): (Double, Int) = {
+    val pieces = line.split(" ")
+    (euclideanDistance(Array(pieces(0).toDouble, pieces(1).toDouble), newPoint), pieces(2).toInt)
+  }
+
+  /*
+   * euclidean distance compute
+   * parameter:
+   *   point1 : first point
+   *   point2 : second point
+   * return:
+   *   the distance between the two points
+   */
+  def euclideanDistance(point1: Array[Double], point2: Array[Double]): Double = {
+    sqrt(pow(point1(0) - point2(0), 2) + pow(point1(1) - point2(1), 2))
+  }
+
+  /*
+   * statistic the first k label
+   * parameter:
+   *   k : 'k'-nn
+   *   list : the list of distance with label
+   * return:
+   *   Map of label and times
+   */
+  def findFirstK(k: Int, list: List[(Double, Int)]): Map[Int, Int] = {
+    val rank: Map[Int, Int] = Map.empty
+    val data = list.sorted.toArray
+    for (i <- 0 until k if data.length > i) {
+      val label = data(i)._2
+      rank(label) = rank.getOrElse(label, 0) + 1
     }
-    distance.foreach{
-      println
-    }
+    rank
   }
 }
